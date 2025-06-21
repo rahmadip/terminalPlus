@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terminal Prompt AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet"/>
+  <style>
+    .hide-scrollbar::-webkit-scrollbar {display: none;}
+    .hide-scrollbar {-ms-overflow-style: none;}
+  </style>
+</head>
+
+<body>
+  <div id="terminalContainer"">
+    <div id="chatContainer"></div>
+    <div id="promptContainer">
+      <textarea id="textPrompt" placeholder="type 'help' to find out the command"></textarea>
+      <div id="btnContainer">
+        <button id="addBtn">add file</button>
+        <button id="voiceBtn">voice</button>
+        <button id="sendBtn">send</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
+  <script src="/index.js" type="module"></script>
+</body>
+</html>
