@@ -44,6 +44,12 @@ let attachedFiles = [];
 // --- GLOBAL MUTE STATUS ---
 let isMuted = false;
 
+// --- DEFINISI ARRAY SESUAI PERMINTAAN ---
+const data1 = ["ferrari", "lamborghini", "porche"];
+const data2 = ["nissan", "datsun", "toyota"];
+const data3 = ["lorem", "ipsum", "dolor"];
+const data4 = ["metalcore", "deathmetal", "blackmetal"];
+
 
 // --- CONTAINER FILE ATTACH ---
 const fileAttachmentContainer = document.createElement('div');
@@ -251,6 +257,73 @@ function executePrompt(userPrompt, files) {
     } else if (lowerCasePrompt === 'mute') {
         isMuted = !isMuted;
         responseHtml = `Voice output is now ${isMuted ? 'Muted' : 'Unmuted'}.`;
+    } else if (lowerCasePrompt.startsWith('list ')) { // Logika untuk command 'list'
+        const parts = lowerCasePrompt.split(' ');
+        const requestedArgNames = parts.slice(1); // Ambil semua argumen setelah 'list'
+
+        // Mapping nama string ke array aktual yang telah didefinisikan
+        const availableArrays = {
+            'data1': data1,
+            'data2': data2,
+            'data3': data3,
+            'data4': data4
+        };
+
+        if (requestedArgNames.length === 0) { // Cek minimal 1 argumen
+            responseHtml = "Command 'list' memerlukan setidaknya satu nama array. Contoh: 'list data1'.";
+            return responseHtml;
+        }
+
+        const selectedArrays = [];
+        const invalidArrays = [];
+        for (const argName of requestedArgNames) {
+            if (availableArrays[argName]) {
+                selectedArrays.push(availableArrays[argName]);
+            } else {
+                invalidArrays.push(argName);
+            }
+        }
+
+        if (invalidArrays.length > 0) {
+            responseHtml = `Nama array tidak valid: ${invalidArrays.join(', ')}. Gunakan 'data1', 'data2', 'data3', atau 'data4'.`;
+            return responseHtml;
+        }
+
+        const numColumns = selectedArrays.length;
+        let maxRows = 0;
+        selectedArrays.forEach(arr => {
+            if (arr.length > maxRows) {
+                maxRows = arr.length;
+            }
+        });
+
+        if (numColumns === 1) { // Jika hanya 1 kolom, tampilkan seperti biasa (list item per baris)
+            responseHtml = selectedArrays[0].join('<br>');
+        } else { // Jika lebih dari 1 kolom, gunakan struktur table
+            let tableContentHtml = `<div class="overflow-x-auto"><table class="table-auto w-full text-left text-sm">`; // Tambah w-full dan text-left
+
+            // Header Tabel
+            tableContentHtml += `<thead><tr>`;
+            for (const argName of requestedArgNames) {
+                tableContentHtml += `<th class="px-4 py-2 font-bold whitespace-nowrap">${argName}</th>`; // Tambah whitespace-nowrap
+            }
+            tableContentHtml += `</tr></thead>`;
+
+            // Body Tabel
+            tableContentHtml += `<tbody>`;
+            for (let i = 0; i < maxRows; i++) { // Iterasi untuk setiap baris
+                tableContentHtml += `<tr>`;
+                for (let j = 0; j < numColumns; j++) { // Iterasi untuk setiap kolom dalam baris saat ini
+                    const item = selectedArrays[j][i] || ''; // Ambil item dari array (kolom) dan baris saat ini
+                    tableContentHtml += `<td class="px-4 py-2 border-t border-neutral-700 whitespace-nowrap">${item}</td>`; // Tambah border-t dan whitespace-nowrap
+                }
+                tableContentHtml += `</tr>`;
+            }
+            tableContentHtml += `</tbody>`;
+            tableContentHtml += `</table></div>`; // Tutup div overflow dan table
+            responseHtml = tableContentHtml;
+        }
+
     } else if (files.length > 0) {
         responseHtml = "Anda mengirim file. Saat ini saya hanya bisa menampilkan teks lorem ipsum untuk balasan. Fitur pemrosesan file akan datang.";
     } else {
