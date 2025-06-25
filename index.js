@@ -35,23 +35,8 @@ btnContainer.className = 'flex justify-between items-center';
 const classBtn = 'h-12 flex flex-1 items-center justify-center text-neutral-50/50 hover:bg-neutral-50/10 hover:text-neutral-50 active:bg-neutral-50/10 active:text-neutral-50  cursor-pointer';
 
 
-// GLOBAL VARIABLE AKUMULASI TEKS FINAL
-let globalAccumulatedFinalText = '';
-
-// --- GLOBAL ARRAY ATTACH FILE ---
-let attachedFiles = [];
-
-// --- GLOBAL MUTE STATUS ---
-let isMuted = false;
-
-// --- DEFINISI ARRAY SESUAI PERMINTAAN ---
-const data1 = ["ferrari", "lamborghini", "porche"];
-const data2 = ["nissan", "datsun", "toyota"];
-const data3 = ["lorem", "ipsum", "dolor"];
-const data4 = ["metalcore", "deathmetal", "blackmetal"];
-
-
 // --- CONTAINER FILE ATTACH ---
+let attachedFiles = [];
 const fileAttachmentContainer = document.createElement('div');
 fileAttachmentContainer.id = 'fileAttachmentContainer';
 fileAttachmentContainer.className = 'flex flex-wrap gap-2 px-3 pt-3';
@@ -98,6 +83,8 @@ fileInput.addEventListener('change', (event) => {
 const voiceBtn = document.getElementById('voiceBtn');
 voiceBtn.className = classBtn;
 let recognition;
+let globalAccumulatedFinalText = '';
+let isMuted = true;
 if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
     recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
     recognition.continuous = true;
@@ -148,10 +135,9 @@ if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
         } catch (error) {
             console.error('Error starting speech recognition:', error);
             if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-                alert('Akses mikrofon ditolak. Mohon izinkan akses mikrofon di pengaturan browser Anda.');
-            } else if (error.name === 'AbortError') {
-            } else {
-                alert('Gagal memulai pengenalan suara. Coba lagi.');
+                alert('Akses mikrofon ditolak. Mohon izinkan akses mikrofon di pengaturan browser Anda.');}
+            else if (error.name === 'AbortError') {}
+            else {alert('Gagal memulai pengenalan suara. Coba lagi.');
             }
         }
     });
@@ -246,6 +232,53 @@ sendBtn.addEventListener('click', () => {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 });
 
+
+// GET DATA
+let datamni = []; // (Header: File)
+let codemni = []; // (Header: Code)
+let download = []; // (Header: URL)
+
+
+// URL Web App Google Apps Script
+const GOOGLE_APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzSy2oKtPHFBKec1WU0SJSjJQ8rF1l_sKmMLt4ULogUoSWyT599FSp0CdIGuSuNvhz6/exec';
+
+async function getAllSheetDataFromAppsScript() {
+    try {
+        console.log("Mencoba mengambil data dari Google Apps Script Web App...");
+        const response = await fetch(GOOGLE_APPS_SCRIPT_WEB_APP_URL);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Response Body: ${errorText}`);
+        }
+
+        const rawData = await response.json();
+        console.log("Data berhasil diambil dari Apps Script (Raw JSON):", rawData);
+
+        const extractAndFilterColumn = (dataArray, columnName) => {
+            return dataArray.map(row => row[columnName])
+                            .filter(item => item !== undefined && item !== null && String(item).trim() !== ''); // Pastikan trim() untuk spasi
+        };
+
+        datamni = extractAndFilterColumn(rawData, 'File');
+        console.log("Variabel datamni berhasil diisi dari Google Sheet (Kolom 'File'):", datamni);
+        if (datamni.length === 0) {console.warn("data empty");}
+
+        codemni = extractAndFilterColumn(rawData, 'Code');
+        console.log("Variabel codemni berhasil diisi dari Google Sheet (Kolom 'Code'):", codemni);
+        if (codemni.length === 0) {console.warn("data empty");}
+
+        download = extractAndFilterColumn(rawData, 'URL');
+        console.log("Variabel download berhasil diisi dari Google Sheet (Kolom 'URL'):", download);
+        if (download.length === 0) {console.warn("data empty");}
+
+
+    } catch (error) {chatContainer.appendChild(createResponseElement(`Failed to load data ${error.message}`));}
+}
+
+getAllSheetDataFromAppsScript();
+
+
 // COMMAND PROMPT
 function executePrompt(userPrompt, files) {
     const lowerCasePrompt = userPrompt.toLowerCase().trim();
@@ -254,74 +287,69 @@ function executePrompt(userPrompt, files) {
 
     if (lowerCasePrompt === 'help') {
         responseHtml = `<b>COMMAND LIST:</b><br><b><i>go</i></b> : lorem ipsum<br><b><i>download</i></b> : lorem ipsum<br><b><i>list</i></b> : lorem ipsum<br><b><i>clear</i></b> : lorem ipsum<br><b><i>mute</i></b> : lorem ipsum`;
+    } else if (lowerCasePrompt.startsWith('echo ')) {
+        const textToEcho = userPrompt.substring('echo '.length).trim();
+        if (textToEcho === '') {
+            responseHtml = 'Penggunaan: echo [teks yang ingin ditampilkan]';
+        } else {
+            responseHtml = textToEcho;
+        }
     } else if (lowerCasePrompt === 'mute') {
         isMuted = !isMuted;
         responseHtml = `Voice output is now ${isMuted ? 'Muted' : 'Unmuted'}.`;
-    } else if (lowerCasePrompt.startsWith('list ')) { // Logika untuk command 'list'
+    } else if (lowerCasePrompt.startsWith('list ')) {
         const parts = lowerCasePrompt.split(' ');
-        const requestedArgNames = parts.slice(1); // Ambil semua argumen setelah 'list'
+        const requestedArgNames = parts.slice(1);
 
-        // Mapping nama string ke array aktual yang telah didefinisikan
-        const availableArrays = {
-            'data1': data1,
-            'data2': data2,
-            'data3': data3,
-            'data4': data4
-        };
+        let selectedArrays = [];
+        let missingArrays = [];
 
-        if (requestedArgNames.length === 0) { // Cek minimal 1 argumen
-            responseHtml = "Command 'list' memerlukan setidaknya satu nama array. Contoh: 'list data1'.";
-            return responseHtml;
-        }
-
-        const selectedArrays = [];
-        const invalidArrays = [];
         for (const argName of requestedArgNames) {
-            if (availableArrays[argName]) {
-                selectedArrays.push(availableArrays[argName]);
+            switch (argName) {
+                case 'datamni':selectedArrays.push(datamni);break;
+                case 'codemni':selectedArrays.push(codemni);break;
+                case 'download':selectedArrays.push(download);break;
+                default:missingArrays.push(argName);
+            }
+        }
+
+        if (selectedArrays.length === 0) {
+            responseHtml = `Data selected not found`;
+        } else {
+            const maxRows = Math.max(...selectedArrays.map(arr => arr.length));
+            const numColumns = selectedArrays.length;
+
+            if (maxRows === 0) {
+                responseHtml = `Semua data yang diminta (${requestedArgNames.join(', ')}) kosong.`;
             } else {
-                invalidArrays.push(argName);
-            }
-        }
+                responseHtml = `<div class="overflow-x-auto"><table class="table-auto w-full text-left border-collapse">`;
 
-        if (invalidArrays.length > 0) {
-            responseHtml = `Nama array tidak valid: ${invalidArrays.join(', ')}. Gunakan 'data1', 'data2', 'data3', atau 'data4'.`;
-            return responseHtml;
-        }
-
-        const numColumns = selectedArrays.length;
-        let maxRows = 0;
-        selectedArrays.forEach(arr => {
-            if (arr.length > maxRows) {
-                maxRows = arr.length;
-            }
-        });
-
-        if (numColumns === 1) { // Jika hanya 1 kolom, tampilkan seperti biasa (list item per baris)
-            responseHtml = selectedArrays[0].join('<br>');
-        } else { // Jika lebih dari 1 kolom, gunakan struktur table
-            let tableContentHtml = `<div class="overflow-x-auto"><table class="table-auto w-full text-left text-sm">`; // Tambah w-full dan text-left
-
-            // Header Tabel
-            tableContentHtml += `<thead><tr>`;
-            for (const argName of requestedArgNames) {
-                tableContentHtml += `<th class="px-4 py-2 font-bold whitespace-nowrap">${argName}</th>`; // Tambah whitespace-nowrap
-            }
-            tableContentHtml += `</tr></thead>`;
-
-            // Body Tabel
-            tableContentHtml += `<tbody>`;
-            for (let i = 0; i < maxRows; i++) { // Iterasi untuk setiap baris
-                tableContentHtml += `<tr>`;
-                for (let j = 0; j < numColumns; j++) { // Iterasi untuk setiap kolom dalam baris saat ini
-                    const item = selectedArrays[j][i] || ''; // Ambil item dari array (kolom) dan baris saat ini
-                    tableContentHtml += `<td class="px-4 py-2 border-t border-neutral-700 whitespace-nowrap">${item}</td>`; // Tambah border-t dan whitespace-nowrap
+                responseHtml += `<thead><tr>`;
+                for (const argName of requestedArgNames) {
+                    responseHtml += `<th class="px-4 py-2 font-bold whitespace-nowrap text-xs">${argName}</th>`;
                 }
-                tableContentHtml += `</tr>`;
+                responseHtml += `</tr></thead>`;
+
+                responseHtml += `<tbody>`;
+                for (let i = 0; i < maxRows; i++) {
+                    responseHtml += `<tr>`;
+                    for (let j = 0; j < numColumns; j++) {
+                        const argName = requestedArgNames[j];
+                        const item = selectedArrays[j][i] || '';
+
+                        let cellContent = '';
+                        if (argName === 'download' && item) {
+                            cellContent = `<a href="${item}" target="_blank" class="text-neutral-50 hover:text-neutral-950 hover:bg-neutral-50">download</a>`;
+                        } else {
+                            cellContent = item;
+                        }
+                        responseHtml += `<td class="px-4 py-2 border-t border-neutral-700 whitespace-nowrap text-xs">${cellContent}</td>`;
+                    }
+                    responseHtml += `</tr>`;
+                }
+                responseHtml += `</tbody>`;
+                responseHtml += `</table></div>`;
             }
-            tableContentHtml += `</tbody>`;
-            tableContentHtml += `</table></div>`; // Tutup div overflow dan table
-            responseHtml = tableContentHtml;
         }
 
     } else if (files.length > 0) {
