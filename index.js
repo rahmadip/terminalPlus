@@ -17,7 +17,7 @@ promptContainer.className = 'flex flex-col border border-neutral-50/50 rounded-x
 
 // TEXT PROMPT
 const textPrompt = document.getElementById('textPrompt');
-textPrompt.className = 'w-full h-24 p-3 bg-transparent placeholder:text-neutral-50/50 text-neutral-50/50 text-sm border-0 ring-0 overflow-y-auto hide-scrollbar';
+textPrompt.className = 'w-full h-24 p-3 bg-transparent placeholder:text-neutral-50/50 text-neutral-50/50 text-base border-0 ring-0 overflow-y-auto hide-scrollbar';
 textPrompt.spellcheck = false;
 textPrompt.autocorrect = false;
 textPrompt.autocapitalize = 'off';
@@ -32,7 +32,7 @@ textPrompt.addEventListener('keypress', (event) => {
 // BUTTON CONTAINER
 const btnContainer = document.getElementById('btnContainer');
 btnContainer.className = 'flex justify-between items-center';
-const classBtn = 'h-12 flex flex-1 items-center justify-center text-neutral-50/50 hover:bg-neutral-50/10 hover:text-neutral-50 active:bg-neutral-50/10 active:text-neutral-50  cursor-pointer';
+const classBtn = 'h-12 flex flex-1 items-center justify-center text-neutral-50/50 hover:bg-neutral-50/10 active:bg-neutral-50/10 cursor-pointer';
 
 
 // --- CONTAINER FILE ATTACH ---
@@ -82,9 +82,11 @@ fileInput.addEventListener('change', (event) => {
 // VOICE BUTTON FUNCTION
 const voiceBtn = document.getElementById('voiceBtn');
 voiceBtn.className = classBtn;
+voiceBtn.style.fill = '#fafafa50'
 let recognition;
 let globalAccumulatedFinalText = '';
 let isMuted = true;
+let isVoiceRecognitionActive = false;
 if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
     recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
     recognition.continuous = true;
@@ -120,31 +122,42 @@ if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
     recognition.onend = () => {
         console.log('Voice recognition ended.');
         textPrompt.value = globalAccumulatedFinalText;
+        isVoiceRecognitionActive = false;
+        voiceBtn.classList.remove('bg-neutral-50/10', 'fill-neutral-50');
     };
 
     recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
-        voiceBtn.textContent = 'voice';
         alert('Terjadi kesalahan saat pengenalan suara: ' + event.error + '. Pastikan mikrofon Anda berfungsi dan berikan izin akses.');
+        isVoiceRecognitionActive = false;
+        voiceBtn.classList.remove('bg-neutral-50/10', 'fill-neutral-50');
     };
 
-    voiceBtn.addEventListener('mousedown', () => {
-        try {
-            recognition.start();
-            console.log('Voice recognition started...');
-        } catch (error) {
-            console.error('Error starting speech recognition:', error);
-            if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-                alert('Akses mikrofon ditolak. Mohon izinkan akses mikrofon di pengaturan browser Anda.');}
-            else if (error.name === 'AbortError') {}
-            else {alert('Gagal memulai pengenalan suara. Coba lagi.');
+    voiceBtn.addEventListener('click', () => {
+        if (isVoiceRecognitionActive) {
+            recognition.stop();
+            console.log('Voice recognition stopped.');
+            isVoiceRecognitionActive = false;
+            voiceBtn.classList.remove('bg-neutral-50/10', 'fill-neutral-50');
+        } else {
+            try {
+                recognition.start();
+                console.log('Voice recognition started...');
+                isVoiceRecognitionActive = true;
+                voiceBtn.classList.add('bg-neutral-50/10', 'fill-neutral-50');
+            } catch (error) {
+                console.error('Error starting speech recognition:', error);
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    alert('Akses mikrofon ditolak. Mohon izinkan akses mikrofon di pengaturan browser Anda.');
+                } else if (error.name === 'AbortError') {
+                    console.warn('Speech recognition start aborted, possibly already active or another issue.');
+                } else {
+                    alert('Gagal memulai pengenalan suara. Coba lagi.');
+                }
+                isVoiceRecognitionActive = false;
+                voiceBtn.classList.remove('bg-neutral-50/10', 'fill-neutral-50');
             }
         }
-    });
-
-    voiceBtn.addEventListener('mouseup', () => {
-        recognition.stop();
-        console.log('Voice recognition stopped.');
     });
 
     window.addEventListener('beforeunload', () => {
